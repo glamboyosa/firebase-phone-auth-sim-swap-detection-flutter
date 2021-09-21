@@ -1,9 +1,11 @@
 # Adding SIM Swap Detection to your React Native Firebase Apps with Firebase Auth & **tru.ID** SIMCheck
+
 ## Requirements
 
 - A [tru.ID Account](https://tru.id)
 - A mobile phone with a SIM card and mobile data connection
 - A [Firebase Account](https://firebase.google.com/console)
+
 ## Getting Started
 
 Clone the starter-files branch via:
@@ -42,6 +44,12 @@ Run the development server, pointing it to the directory containing the newly cr
 ```
 tru server -t
 ```
+
+## Getting started with FlutterFire
+
+This project uses FlutterFire which is a set of Flutter plugins which connect your Flutter application to Firebase. To get your project up and running check out the [guide](https://firebase.flutter.dev/docs/overview).
+
+## Run the app
 
 To start the project, ensure you have a physical device connected then run:
 
