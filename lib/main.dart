@@ -35,7 +35,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     if (initializationError) {
-      errorHandler(context, 'Something Went Wrong.', '');
+      errorHandler(context, 'Something Went Wrong.', 'Please restart the app.');
     }
     if(!isInitialized){
        return const Center(
