@@ -47,7 +47,9 @@ tru server -t
 
 ## Getting started with FlutterFire
 
-This project uses FlutterFire which is a set of Flutter plugins which connect your Flutter application to Firebase. To get your project up and running check out the [guide](https://firebase.flutter.dev/docs/overview).
+This project uses FlutterFire which is a set of Flutter plugins which connect your Flutter application to Firebase. To get your project up and running check out the [overview guide](https://firebase.flutter.dev/docs/overview) and how to get setup for [Android](https://firebase.flutter.dev/docs/installation/android), [iOS](https://firebase.flutter.dev/docs/installation/ios) and [Authentication](https://firebase.flutter.dev/docs/auth/overview).
+
+> **NOTE** Flutter with null safety is preferred.
 
 ## Run the app
 

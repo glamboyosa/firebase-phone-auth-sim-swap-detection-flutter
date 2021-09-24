@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutterfire/models.dart';
 import 'package:http/http.dart' as http;
-import 'package:tru_sdk_flutter/tru_sdk_flutter.dart';
+import 'package:flutterfire/helpers.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 final String baseURL = '<YOUR_LOCAL_TUNNEL_URL>';
 
@@ -11,10 +13,6 @@ class Login extends StatefulWidget {
   @override
   _LoginState createState() => _LoginState();
 }
-
-
-
-
 
 Future<void> successHandler(BuildContext context) {
   return showDialog(
@@ -35,6 +33,18 @@ Future<void> successHandler(BuildContext context) {
           ],
         );
       });
+}
+
+Future<SIMCheck?> createSIMCheck(String phoneNumber) async {
+  final response = await http.post(Uri.parse('$baseURL/sim-check'),
+      body: {"phone_number": phoneNumber});
+
+  if (response.statusCode != 200) {
+    return null;
+  }
+  final String data = response.body;
+
+  return SIMCheckFromJSON(data);
 }
 
 class _LoginState extends State<Login> {
@@ -89,6 +99,41 @@ class _LoginState extends State<Login> {
                       setState(() {
                         loading = true;
                       });
+
+                      SIMCheck? SIMCheckResult =
+                          await createSIMCheck(phoneNumber!);
+
+                      if (SIMCheckResult == null) {
+                        return errorHandler(context, 'Something went wrong.',
+                            'Phone number not supported');
+                      }
+
+                      if (SIMCheckResult.simChanged) {
+                        return errorHandler(context, 'Something went wrong',
+                            'SIM changed too recently.');
+                      }
+
+                      // SIM hasn't changed within 7 days. Proceed with Firebase Auth
+
+                      // create a Firebase Auth instance
+                      FirebaseAuth auth = FirebaseAuth.instance;
+                      await auth.verifyPhoneNumber(
+                        phoneNumber: phoneNumber!,
+                        verificationCompleted:
+                            (PhoneAuthCredential credential) {
+                          // Android only method that auto-signs in on Android devices that support it
+                          auth.signInWithCredential(credential);
+                        },
+                        verificationFailed: (FirebaseAuthException e) {
+                          errorHandler(context, 'Something went wrong.',
+                              'Unable to verify your phone number');
+                          return;
+                        },
+                        codeSent: (String verificationId, int? resendToken) {
+
+                        },
+                        codeAutoRetrievalTimeout: (String verificationId) {},
+                      );
                     },
                     child: loading
                         ? const CircularProgressIndicator()
