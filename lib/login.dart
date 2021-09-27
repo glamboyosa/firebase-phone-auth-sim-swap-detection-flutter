@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutterfire/models.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutterfire/helpers.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 final String baseURL = '<YOUR_LOCAL_TUNNEL_URL>';

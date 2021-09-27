@@ -31,7 +31,12 @@ class _MyAppState extends State<MyApp> {
       });
     }
   }
-
+    @override
+  void initState() {
+    initializeFlutterFire();
+    super.initState();
+  }
+  
   @override
   Widget build(BuildContext context) {
     if (initializationError) {
