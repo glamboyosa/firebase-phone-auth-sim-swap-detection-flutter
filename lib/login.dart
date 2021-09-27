@@ -49,6 +49,8 @@ Future<SIMCheck?> createSIMCheck(String phoneNumber) async {
 
 class _LoginState extends State<Login> {
   String? phoneNumber;
+  String? otp;
+  bool SIMCheckSuccess = false;
   bool loading = false;
   @override
   Widget build(BuildContext context) {
@@ -64,8 +66,8 @@ class _LoginState extends State<Login> {
                 )),
             Container(
                 width: double.infinity,
-                child: const Text(
-                  'Login.',
+                child: Text(
+                  !SIMCheckSuccess ? 'Login.' : 'Enter OTP',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -76,18 +78,31 @@ class _LoginState extends State<Login> {
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 30),
-                child: TextField(
-                  keyboardType: TextInputType.phone,
-                  onChanged: (text) {
-                    setState(() {
-                      phoneNumber = text;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Enter your phone number.',
-                  ),
-                ),
+                child: !SIMCheckSuccess
+                    ? TextField(
+                        keyboardType: TextInputType.phone,
+                        onChanged: (text) {
+                          setState(() {
+                            phoneNumber = text;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter your phone number.',
+                        ),
+                      )
+                    : TextField(
+                        keyboardType: TextInputType.phone,
+                        onChanged: (text) {
+                          setState(() {
+                            otp = text;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter your phone number.',
+                        ),
+                      ),
               ),
             ),
             Container(
@@ -111,9 +126,14 @@ class _LoginState extends State<Login> {
                       if (SIMCheckResult.simChanged) {
                         return errorHandler(context, 'Something went wrong',
                             'SIM changed too recently.');
+                      } else {
+                        // SIM hasn't changed within 7 days, update state.
+                        setState(() {
+                          SIMCheckSuccess = true;
+                        });
                       }
 
-                      // SIM hasn't changed within 7 days. Proceed with Firebase Auth
+                      //  Proceed with Firebase Auth
 
                       // create a Firebase Auth instance
                       FirebaseAuth auth = FirebaseAuth.instance;
@@ -129,8 +149,18 @@ class _LoginState extends State<Login> {
                               'Unable to verify your phone number');
                           return;
                         },
-                        codeSent: (String verificationId, int? resendToken) {
+                        codeSent:
+                            (String verificationId, int? resendToken) async {
+                          // create a PhoneAuthCredential with the otp
+                          PhoneAuthCredential credential =
+                              PhoneAuthProvider.credential(
+                                  verificationId: verificationId,
+                                  smsCode: otp!);
 
+                          // sign in the user
+                          await auth.signInWithCredential(credential);
+
+                          return successHandler(context);
                         },
                         codeAutoRetrievalTimeout: (String verificationId) {},
                       );
