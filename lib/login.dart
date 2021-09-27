@@ -13,6 +13,7 @@ class Login extends StatefulWidget {
   _LoginState createState() => _LoginState();
 }
 
+// Success scenario UI
 Future<void> successHandler(BuildContext context) {
   return showDialog(
       context: context,
@@ -47,10 +48,50 @@ Future<SIMCheck?> createSIMCheck(String phoneNumber) async {
 }
 
 class _LoginState extends State<Login> {
-  String? phoneNumber;
-  String? otp;
+  final phoneNumber = TextEditingController();
+  final otp = TextEditingController();
+  String? phoneNumberValue;
+  String? otpValue;
   bool SIMCheckSuccess = false;
   bool loading = false;
+  @override
+  void dispose() {
+    phoneNumber.dispose();
+    otp.dispose();
+    super.dispose();
+  }
+
+// OTP Screen UI
+  Future<void> otpHandler(BuildContext context) {
+    return showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Please Enter OTP"),
+            content: TextField(
+              keyboardType: TextInputType.phone,
+              controller: otp,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Enter OTP',
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    otpValue = otp.text;
+                  });
+
+                  return Navigator.pop(context, 'OK');
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,8 +106,8 @@ class _LoginState extends State<Login> {
                 )),
             Container(
                 width: double.infinity,
-                child: Text(
-                  !SIMCheckSuccess ? 'Login.' : 'Enter OTP',
+                child: const Text(
+                  'Login.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -75,34 +116,16 @@ class _LoginState extends State<Login> {
                 )),
             Container(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 30),
-                child: !SIMCheckSuccess
-                    ? TextField(
-                        keyboardType: TextInputType.phone,
-                        onChanged: (text) {
-                          setState(() {
-                            phoneNumber = text;
-                          });
-                        },
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: 'Enter your phone number.',
-                        ),
-                      )
-                    : TextField(
-                        keyboardType: TextInputType.phone,
-                        onChanged: (text) {
-                          setState(() {
-                            otp = text;
-                          });
-                        },
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: 'Enter your phone number.',
-                        ),
-                      ),
-              ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 30),
+                  child: TextField(
+                    keyboardType: TextInputType.phone,
+                    controller: phoneNumber,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter your phone number.',
+                    ),
+                  )),
             ),
             Container(
               child: Padding(
@@ -115,52 +138,82 @@ class _LoginState extends State<Login> {
                       });
 
                       SIMCheck? SIMCheckResult =
-                          await createSIMCheck(phoneNumber!);
+                          await createSIMCheck(phoneNumber.text);
 
                       if (SIMCheckResult == null) {
+                        setState(() {
+                          loading = false;
+                        });
                         return errorHandler(context, 'Something went wrong.',
                             'Phone number not supported');
                       }
 
-                      if (SIMCheckResult.simChanged) {
-                        return errorHandler(context, 'Something went wrong',
-                            'SIM changed too recently.');
-                      } else {
-                        // SIM hasn't changed within 7 days, update state.
-                        setState(() {
-                          SIMCheckSuccess = true;
-                        });
-                      }
+                      // if (SIMCheckResult.simChanged) {
+                      //   setState(() {
+                      //     loading = false;
+                      //   });
+                      //   return errorHandler(context, 'Something went wrong',
+                      //       'SIM changed too recently.');
+                      // } else {
+                      //   // SIM hasn't changed within 7 days, update state.
+                      //   setState(() {
+                      //       loading = false;
+                      //     SIMCheckSuccess = true;
+                      //   });
+                      // }
 
-                      //  Proceed with Firebase Auth
+                      setState(() {
+                        loading = false;
+                        phoneNumberValue = phoneNumber.text;
+                        SIMCheckSuccess = true;
+                      });
+                      phoneNumber.clear();
 
                       // create a Firebase Auth instance
                       FirebaseAuth auth = FirebaseAuth.instance;
                       await auth.verifyPhoneNumber(
-                        phoneNumber: phoneNumber!,
+                        phoneNumber: phoneNumberValue!,
                         verificationCompleted:
-                            (PhoneAuthCredential credential) {
+                            (PhoneAuthCredential credential) async {
                           // Android only method that auto-signs in on Android devices that support it
-                          auth.signInWithCredential(credential);
+                          await auth.signInWithCredential(credential);
+
+                          setState(() {
+                            loading = false;
+                          });
                         },
                         verificationFailed: (FirebaseAuthException e) {
+                          setState(() {
+                            loading = false;
+                          });
                           errorHandler(context, 'Something went wrong.',
                               'Unable to verify your phone number');
                           return;
                         },
                         codeSent:
                             (String verificationId, int? resendToken) async {
+                          // render OTP dialog UI
+                         otpHandler(context);
                           // create a PhoneAuthCredential with the otp
                           PhoneAuthCredential credential =
                               PhoneAuthProvider.credential(
                                   verificationId: verificationId,
-                                  smsCode: otp!);
+                                  smsCode: otpValue!);
                           try {
                             // sign in the user
                             await auth.signInWithCredential(credential);
+
+                            setState(() {
+                              loading = false;
+                            });
                           } catch (e) {
                             print(e);
-                            errorHandler(context, "Unable to sign you in.",
+                            setState(() {
+                              loading = false;
+                            });
+                            return errorHandler(
+                                context,
+                                "Unable to sign you in.",
                                 "Unable to sign you in at this moment. Please try again");
                           }
 
