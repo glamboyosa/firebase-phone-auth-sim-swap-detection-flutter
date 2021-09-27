@@ -156,9 +156,14 @@ class _LoginState extends State<Login> {
                               PhoneAuthProvider.credential(
                                   verificationId: verificationId,
                                   smsCode: otp!);
-
-                          // sign in the user
-                          await auth.signInWithCredential(credential);
+                          try {
+                            // sign in the user
+                            await auth.signInWithCredential(credential);
+                          } catch (e) {
+                            print(e);
+                            errorHandler(context, "Unable to sign you in.",
+                                "Unable to sign you in at this moment. Please try again");
+                          }
 
                           return successHandler(context);
                         },
