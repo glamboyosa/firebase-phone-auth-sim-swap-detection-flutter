@@ -163,7 +163,6 @@ class _LoginState extends State<Login> {
                       // }
 
                       setState(() {
-                        loading = false;
                         phoneNumberValue = phoneNumber.text;
                         SIMCheckSuccess = true;
                       });
@@ -173,6 +172,8 @@ class _LoginState extends State<Login> {
                       FirebaseAuth auth = FirebaseAuth.instance;
                       await auth.verifyPhoneNumber(
                         phoneNumber: phoneNumberValue!,
+                        timeout: const Duration(seconds: 120),
+                        forceResendingToken: 159733353,
                         verificationCompleted:
                             (PhoneAuthCredential credential) async {
                           // Android only method that auto-signs in on Android devices that support it
@@ -181,6 +182,8 @@ class _LoginState extends State<Login> {
                           setState(() {
                             loading = false;
                           });
+
+                          return successHandler(context);
                         },
                         verificationFailed: (FirebaseAuthException e) {
                           setState(() {
@@ -192,8 +195,9 @@ class _LoginState extends State<Login> {
                         },
                         codeSent:
                             (String verificationId, int? resendToken) async {
+                       
                           // render OTP dialog UI
-                         otpHandler(context);
+                           await otpHandler(context);
                           // create a PhoneAuthCredential with the otp
                           PhoneAuthCredential credential =
                               PhoneAuthProvider.credential(
@@ -208,6 +212,8 @@ class _LoginState extends State<Login> {
                             });
                           } catch (e) {
                             print(e);
+                            print("your resend token is: ");
+                          print(resendToken);
                             setState(() {
                               loading = false;
                             });
