@@ -168,11 +168,6 @@ class _LoginState extends State<Login> {
                       ReachabilityDetails reachabilityDetails =
                           json.decode(reachabilityInfo!);
 
-                      if (reachabilityDetails.error?.status == 400) {
-                        setState(() {
-                          proceedWithFirebaseAuth = true;
-                        });
-                      }
                       bool isSIMCheckSupported = false;
 
                       if (reachabilityDetails.error?.status != 412) {
@@ -203,115 +198,104 @@ class _LoginState extends State<Login> {
                         if (SIMCheckResult.simChanged) {
                           setState(() {
                             loading = false;
+                            phoneNumberValue = phoneNumber.text;
                           });
+                          phoneNumber.clear();
                           return errorHandler(context, 'Something went wrong',
                               'SIM changed too recently.');
-                        } else {
-                          // SIM hasn't changed within 7 days, update state.
-                          setState(() {
-                            loading = false;
-                            phoneNumberValue = phoneNumber.text;
-                            proceedWithFirebaseAuth = true;
-                          });
                         }
 
-                        phoneNumber.clear();
+                        //The SIM hasn't changed in 7 days, proceed with Firebase Auth
 
-                        // if we the SIM hasn't changed in 7 days, proceed with Firebase Auth 
-                        if (proceedWithFirebaseAuth) {
-                                       // create a Firebase Auth instance
-                      FirebaseAuth auth = FirebaseAuth.instance;
-                      
-                      await auth.verifyPhoneNumber(
-                        phoneNumber: phoneNumberValue!,
-                        timeout: const Duration(seconds: 120),
-                        verificationCompleted:
-                            (PhoneAuthCredential credential) async {
-                          // Android only method that auto-signs in on Android devices that support it
-                          await auth.signInWithCredential(credential);
+                        // create a Firebase Auth instance
+                        FirebaseAuth auth = FirebaseAuth.instance;
 
-                          setState(() {
-                            loading = false;
-                          });
+                        await auth.verifyPhoneNumber(
+                          phoneNumber: phoneNumberValue!,
+                          timeout: const Duration(seconds: 120),
+                          verificationCompleted:
+                              (PhoneAuthCredential credential) async {
+                            // Android only method that auto-signs in on Android devices that support it
+                            await auth.signInWithCredential(credential);
 
-                          return successHandler(context);
-                        },
-                        verificationFailed: (FirebaseAuthException e) {
-                         
-                          setState(() {
-                            loading = false;
-                          });
+                            setState(() {
+                              loading = false;
+                            });
 
-                          errorHandler(context, 'Something went wrong.',
-                              'Unable to verify your phone number');
-                          
-                          return;
-                        },
-                        codeSent:
-                            (String verificationId, int? resendToken) async {
-                          // save resendToken to state
-                         
-                          setState(() {
-                            resendingToken = resendToken;
-                          });
-                         
-                          print("your resend token is: ");
-                          
-                          print(resendToken);
-                          // render OTP dialog UI
-                          otpHandler(context, auth, verificationId);
-                        },
-                        codeAutoRetrievalTimeout: (String verificationId) {},
-                      );
-                        }
+                            return successHandler(context);
+                          },
+                          verificationFailed: (FirebaseAuthException e) {
+                            setState(() {
+                              loading = false;
+                            });
+
+                            errorHandler(context, 'Something went wrong.',
+                                'Unable to verify your phone number');
+
+                            return;
+                          },
+                          codeSent:
+                              (String verificationId, int? resendToken) async {
+                            // save resendToken to state
+
+                            setState(() {
+                              resendingToken = resendToken;
+                            });
+
+                            print("your resend token is: ");
+
+                            print(resendToken);
+                            // render OTP dialog UI
+                            otpHandler(context, auth, verificationId);
+                          },
+                          codeAutoRetrievalTimeout: (String verificationId) {},
+                        );
                       } else {
                         // SIM Check isn't supported by MNO do not bother creating SIMCheck just proceed with Firebase Auth
-                                     // create a Firebase Auth instance
-                      FirebaseAuth auth = FirebaseAuth.instance;
-                      await auth.verifyPhoneNumber(
-                        phoneNumber: phoneNumberValue!,
-                        timeout: const Duration(seconds: 120),
-                        verificationCompleted:
-                            (PhoneAuthCredential credential) async {
-                          // Android only method that auto-signs in on Android devices that support it
-                          await auth.signInWithCredential(credential);
+                        // create a Firebase Auth instance
+                        phoneNumber.clear();
+                        FirebaseAuth auth = FirebaseAuth.instance;
+                        await auth.verifyPhoneNumber(
+                          phoneNumber: phoneNumberValue!,
+                          timeout: const Duration(seconds: 120),
+                          verificationCompleted:
+                              (PhoneAuthCredential credential) async {
+                            // Android only method that auto-signs in on Android devices that support it
+                            await auth.signInWithCredential(credential);
 
-                          setState(() {
-                            loading = false;
-                          });
+                            setState(() {
+                              loading = false;
+                            });
 
-                          return successHandler(context);
-                        },
-                        verificationFailed: (FirebaseAuthException e) {
-                         
-                          setState(() {
-                            loading = false;
-                          });
-                         
-                          errorHandler(context, 'Something went wrong.',
-                              'Unable to verify your phone number');
-                         
-                          return;
-                        },
-                        codeSent:
-                            (String verificationId, int? resendToken) async {
-                          // save resendToken to state
-                          
-                          setState(() {
-                            resendingToken = resendToken;
-                          });
-                         
-                          print("your resend token is: ");
-                         
-                          print(resendToken);
-                          // render OTP dialog UI
-                          otpHandler(context, auth, verificationId);
-                        },
-                        codeAutoRetrievalTimeout: (String verificationId) {},
-                      );
+                            return successHandler(context);
+                          },
+                          verificationFailed: (FirebaseAuthException e) {
+                            setState(() {
+                              loading = false;
+                            });
+
+                            errorHandler(context, 'Something went wrong.',
+                                'Unable to verify your phone number');
+
+                            return;
+                          },
+                          codeSent:
+                              (String verificationId, int? resendToken) async {
+                            // save resendToken to state
+
+                            setState(() {
+                              resendingToken = resendToken;
+                            });
+
+                            print("your resend token is: ");
+
+                            print(resendToken);
+                            // render OTP dialog UI
+                            otpHandler(context, auth, verificationId);
+                          },
+                          codeAutoRetrievalTimeout: (String verificationId) {},
+                        );
                       }
-
-         
                     },
                     child: loading
                         ? const CircularProgressIndicator()
