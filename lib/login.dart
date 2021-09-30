@@ -51,7 +51,7 @@ class _LoginState extends State<Login> {
   final phoneNumber = TextEditingController();
   final otp = TextEditingController();
   String? phoneNumberValue;
-  String? otpValue;
+  int? resendingToken;
   bool SIMCheckSuccess = false;
   bool loading = false;
   @override
@@ -62,7 +62,7 @@ class _LoginState extends State<Login> {
   }
 
 // OTP Screen UI
-  Future<void> otpHandler(BuildContext context) {
+  Future<void> otpHandler(BuildContext context, FirebaseAuth auth, String verificationId) {
     return showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -78,10 +78,34 @@ class _LoginState extends State<Login> {
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: () {
-                  setState(() {
-                    otpValue = otp.text;
-                  });
+                onPressed: ()async {
+                 
+                   // create a PhoneAuthCredential with the otp
+
+                          PhoneAuthCredential credential =
+                              PhoneAuthProvider.credential(
+                                  verificationId: verificationId,
+                                  smsCode: otp.text);
+                          try {
+                            // sign in the user
+                            await auth.signInWithCredential(credential);
+
+                            setState(() {
+                              loading = false;
+                            });
+                          } catch (e) {
+                            print(e);
+                         
+                            setState(() {
+                              loading = false;
+                            });
+                            return errorHandler(
+                                context,
+                                "Unable to sign you in.",
+                                "Unable to sign you in at this moment. Please try again");
+                          }
+
+                          return successHandler(context);
 
                   return Navigator.pop(context, 'OK');
                 },
@@ -173,7 +197,6 @@ class _LoginState extends State<Login> {
                       await auth.verifyPhoneNumber(
                         phoneNumber: phoneNumberValue!,
                         timeout: const Duration(seconds: 120),
-                        forceResendingToken: 159733353,
                         verificationCompleted:
                             (PhoneAuthCredential credential) async {
                           // Android only method that auto-signs in on Android devices that support it
@@ -195,35 +218,16 @@ class _LoginState extends State<Login> {
                         },
                         codeSent:
                             (String verificationId, int? resendToken) async {
-                       
-                          // render OTP dialog UI
-                           await otpHandler(context);
-                          // create a PhoneAuthCredential with the otp
-                          PhoneAuthCredential credential =
-                              PhoneAuthProvider.credential(
-                                  verificationId: verificationId,
-                                  smsCode: otpValue!);
-                          try {
-                            // sign in the user
-                            await auth.signInWithCredential(credential);
-
+                            // save resendToken to state
                             setState(() {
-                              loading = false;
+                            resendingToken = resendToken;
                             });
-                          } catch (e) {
-                            print(e);
-                            print("your resend token is: ");
+                          print("your resend token is: ");
                           print(resendToken);
-                            setState(() {
-                              loading = false;
-                            });
-                            return errorHandler(
-                                context,
-                                "Unable to sign you in.",
-                                "Unable to sign you in at this moment. Please try again");
-                          }
+                          // render OTP dialog UI
+                         otpHandler(context, auth, verificationId);
 
-                          return successHandler(context);
+                        
                         },
                         codeAutoRetrievalTimeout: (String verificationId) {},
                       );
