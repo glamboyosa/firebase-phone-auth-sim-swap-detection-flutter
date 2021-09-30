@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutterfire/models.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutterfire/helpers.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tru_sdk_flutter/tru_sdk_flutter.dart';
 
 final String baseURL = '<YOUR_LOCAL_TUNNEL_URL>';
 
@@ -52,7 +55,7 @@ class _LoginState extends State<Login> {
   final otp = TextEditingController();
   String? phoneNumberValue;
   int? resendingToken;
-  bool SIMCheckSuccess = false;
+  bool proceedWithFirebaseAuth = false;
   bool loading = false;
   @override
   void dispose() {
@@ -62,7 +65,8 @@ class _LoginState extends State<Login> {
   }
 
 // OTP Screen UI
-  Future<void> otpHandler(BuildContext context, FirebaseAuth auth, String verificationId) {
+  Future<void> otpHandler(
+      BuildContext context, FirebaseAuth auth, String verificationId) {
     return showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -78,34 +82,29 @@ class _LoginState extends State<Login> {
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: ()async {
-                 
-                   // create a PhoneAuthCredential with the otp
+                onPressed: () async {
+                  // create a PhoneAuthCredential with the otp
 
-                          PhoneAuthCredential credential =
-                              PhoneAuthProvider.credential(
-                                  verificationId: verificationId,
-                                  smsCode: otp.text);
-                          try {
-                            // sign in the user
-                            await auth.signInWithCredential(credential);
+                  PhoneAuthCredential credential = PhoneAuthProvider.credential(
+                      verificationId: verificationId, smsCode: otp.text);
+                  try {
+                    // sign in the user
+                    await auth.signInWithCredential(credential);
 
-                            setState(() {
-                              loading = false;
-                            });
-                          } catch (e) {
-                            print(e);
-                         
-                            setState(() {
-                              loading = false;
-                            });
-                            return errorHandler(
-                                context,
-                                "Unable to sign you in.",
-                                "Unable to sign you in at this moment. Please try again");
-                          }
+                    setState(() {
+                      loading = false;
+                    });
+                  } catch (e) {
+                    print(e);
 
-                          return successHandler(context);
+                    setState(() {
+                      loading = false;
+                    });
+                    return errorHandler(context, "Unable to sign you in.",
+                        "Unable to sign you in at this moment. Please try again");
+                  }
+
+                  successHandler(context);
 
                   return Navigator.pop(context, 'OK');
                 },
@@ -161,38 +160,113 @@ class _LoginState extends State<Login> {
                         loading = true;
                       });
 
-                      SIMCheck? SIMCheckResult =
-                          await createSIMCheck(phoneNumber.text);
+                      // check if we have coverage
+                      TruSdkFlutter sdk = TruSdkFlutter();
 
-                      if (SIMCheckResult == null) {
+                      String? reachabilityInfo = await sdk.isReachable();
+
+                      ReachabilityDetails reachabilityDetails =
+                          json.decode(reachabilityInfo!);
+
+                      if (reachabilityDetails.error?.status == 400) {
                         setState(() {
-                          loading = false;
+                          proceedWithFirebaseAuth = true;
                         });
-                        return errorHandler(context, 'Something went wrong.',
-                            'Phone number not supported');
+                      }
+                      bool isSIMCheckSupported = false;
+
+                      if (reachabilityDetails.error?.status != 412) {
+                        isSIMCheckSupported = false;
+
+                        for (var products in reachabilityDetails.products!) {
+                          if (products.productName == "Sim Check") {
+                            isSIMCheckSupported = true;
+                          }
+                        }
+                      } else {
+                        isSIMCheckSupported = true;
                       }
 
-                      // if (SIMCheckResult.simChanged) {
-                      //   setState(() {
-                      //     loading = false;
-                      //   });
-                      //   return errorHandler(context, 'Something went wrong',
-                      //       'SIM changed too recently.');
-                      // } else {
-                      //   // SIM hasn't changed within 7 days, update state.
-                      //   setState(() {
-                      //       loading = false;
-                      //     SIMCheckSuccess = true;
-                      //   });
-                      // }
+                      if (isSIMCheckSupported) {
+                        // SIMCheck is supported, create SIMCheck
+                        SIMCheck? SIMCheckResult =
+                            await createSIMCheck(phoneNumber.text);
 
-                      setState(() {
-                        phoneNumberValue = phoneNumber.text;
-                        SIMCheckSuccess = true;
-                      });
-                      phoneNumber.clear();
+                        if (SIMCheckResult == null) {
+                          setState(() {
+                            loading = false;
+                          });
+                          return errorHandler(context, 'Something went wrong.',
+                              'Phone number not supported');
+                        }
 
-                      // create a Firebase Auth instance
+                        if (SIMCheckResult.simChanged) {
+                          setState(() {
+                            loading = false;
+                          });
+                          return errorHandler(context, 'Something went wrong',
+                              'SIM changed too recently.');
+                        } else {
+                          // SIM hasn't changed within 7 days, update state.
+                          setState(() {
+                            loading = false;
+                            phoneNumberValue = phoneNumber.text;
+                            proceedWithFirebaseAuth = true;
+                          });
+                        }
+
+                        phoneNumber.clear();
+
+                        // if we the SIM hasn't changed in 7 days, proceed with Firebase Auth 
+                        if (proceedWithFirebaseAuth) {
+                                       // create a Firebase Auth instance
+                      FirebaseAuth auth = FirebaseAuth.instance;
+                      
+                      await auth.verifyPhoneNumber(
+                        phoneNumber: phoneNumberValue!,
+                        timeout: const Duration(seconds: 120),
+                        verificationCompleted:
+                            (PhoneAuthCredential credential) async {
+                          // Android only method that auto-signs in on Android devices that support it
+                          await auth.signInWithCredential(credential);
+
+                          setState(() {
+                            loading = false;
+                          });
+
+                          return successHandler(context);
+                        },
+                        verificationFailed: (FirebaseAuthException e) {
+                         
+                          setState(() {
+                            loading = false;
+                          });
+
+                          errorHandler(context, 'Something went wrong.',
+                              'Unable to verify your phone number');
+                          
+                          return;
+                        },
+                        codeSent:
+                            (String verificationId, int? resendToken) async {
+                          // save resendToken to state
+                         
+                          setState(() {
+                            resendingToken = resendToken;
+                          });
+                         
+                          print("your resend token is: ");
+                          
+                          print(resendToken);
+                          // render OTP dialog UI
+                          otpHandler(context, auth, verificationId);
+                        },
+                        codeAutoRetrievalTimeout: (String verificationId) {},
+                      );
+                        }
+                      } else {
+                        // SIM Check isn't supported by MNO do not bother creating SIMCheck just proceed with Firebase Auth
+                                     // create a Firebase Auth instance
                       FirebaseAuth auth = FirebaseAuth.instance;
                       await auth.verifyPhoneNumber(
                         phoneNumber: phoneNumberValue!,
@@ -209,28 +283,35 @@ class _LoginState extends State<Login> {
                           return successHandler(context);
                         },
                         verificationFailed: (FirebaseAuthException e) {
+                         
                           setState(() {
                             loading = false;
                           });
+                         
                           errorHandler(context, 'Something went wrong.',
                               'Unable to verify your phone number');
+                         
                           return;
                         },
                         codeSent:
                             (String verificationId, int? resendToken) async {
-                            // save resendToken to state
-                            setState(() {
+                          // save resendToken to state
+                          
+                          setState(() {
                             resendingToken = resendToken;
-                            });
+                          });
+                         
                           print("your resend token is: ");
+                         
                           print(resendToken);
                           // render OTP dialog UI
-                         otpHandler(context, auth, verificationId);
-
-                        
+                          otpHandler(context, auth, verificationId);
                         },
                         codeAutoRetrievalTimeout: (String verificationId) {},
                       );
+                      }
+
+         
                     },
                     child: loading
                         ? const CircularProgressIndicator()
