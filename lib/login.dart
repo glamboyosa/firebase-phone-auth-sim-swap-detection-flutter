@@ -45,6 +45,7 @@ Future<SIMCheck?> createSIMCheck(String phoneNumber) async {
   if (response.statusCode != 200) {
     return null;
   }
+
   final String data = response.body;
 
   return SIMCheckFromJSON(data);
@@ -53,10 +54,12 @@ Future<SIMCheck?> createSIMCheck(String phoneNumber) async {
 class _LoginState extends State<Login> {
   final phoneNumber = TextEditingController();
   final otp = TextEditingController();
+
   String? phoneNumberValue;
   int? resendingToken;
   bool proceedWithFirebaseAuth = false;
   bool loading = false;
+
   @override
   void dispose() {
     phoneNumber.dispose();
@@ -64,7 +67,7 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
-// OTP Screen UI
+  // OTP Screen UI
   Future<void> otpHandler(
       BuildContext context, FirebaseAuth auth, String verificationId) {
     return showDialog(
@@ -100,6 +103,7 @@ class _LoginState extends State<Login> {
                     setState(() {
                       loading = false;
                     });
+
                     return errorHandler(context, "Unable to sign you in.",
                         "Unable to sign you in at this moment. Please try again");
                   }
@@ -166,7 +170,13 @@ class _LoginState extends State<Login> {
                       String? reachabilityInfo = await sdk.isReachable();
 
                       ReachabilityDetails reachabilityDetails =
-                          json.decode(reachabilityInfo!);
+                          ReachabilityDetails.fromJson(
+                              jsonDecode(reachabilityInfo!));
+
+                      if (reachabilityDetails.error?.status == 400) {
+                        return errorHandler(context, "Something Went Wrong.",
+                            "Mobile Operator not supported.");
+                      }
 
                       bool isSIMCheckSupported = false;
 
@@ -191,6 +201,7 @@ class _LoginState extends State<Login> {
                           setState(() {
                             loading = false;
                           });
+
                           return errorHandler(context, 'Something went wrong.',
                               'Phone number not supported');
                         }
@@ -200,12 +211,14 @@ class _LoginState extends State<Login> {
                             loading = false;
                             phoneNumberValue = phoneNumber.text;
                           });
+
                           phoneNumber.clear();
+
                           return errorHandler(context, 'Something went wrong',
                               'SIM changed too recently.');
                         }
 
-                        //The SIM hasn't changed in 7 days, proceed with Firebase Auth
+                        //The SIM hasn't changed in the last 7 days, proceed with Firebase Auth
 
                         // create a Firebase Auth instance
                         FirebaseAuth auth = FirebaseAuth.instance;
@@ -282,7 +295,6 @@ class _LoginState extends State<Login> {
                           codeSent:
                               (String verificationId, int? resendToken) async {
                             // save resendToken to state
-
                             setState(() {
                               resendingToken = resendToken;
                             });

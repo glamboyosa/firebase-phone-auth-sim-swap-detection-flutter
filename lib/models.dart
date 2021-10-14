@@ -1,5 +1,7 @@
 import 'dart:convert';
-SIMCheck SIMCheckFromJSON(String jsonString) => SIMCheck.fromJSON(json.decode(jsonString));
+
+SIMCheck SIMCheckFromJSON(String jsonString) =>
+    SIMCheck.fromJSON(json.decode(jsonString));
 
 class SIMCheck {
   bool simChanged;
