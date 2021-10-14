@@ -9,12 +9,7 @@ class Login extends StatefulWidget {
   _LoginState createState() => _LoginState();
 }
 
-
-
 class _LoginState extends State<Login> {
-
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,8 +49,7 @@ class _LoginState extends State<Login> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 30),
                 child: TextButton(
-                    onPressed: () async {  },
-                    child: const Text('Login')),
+                    onPressed: () async {}, child: const Text('Login')),
               ),
             )
           ],

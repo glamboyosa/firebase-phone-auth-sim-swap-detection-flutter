@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
- Future<void> errorHandler(BuildContext context, String title, String content) {
+Future<void> errorHandler(BuildContext context, String title, String content) {
   return showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -19,6 +19,4 @@ import 'package:flutter/material.dart';
           ],
         );
       });
-} 
-
-
+}

@@ -31,21 +31,22 @@ class _MyAppState extends State<MyApp> {
       });
     }
   }
-    @override
+
+  @override
   void initState() {
     initializeFlutterFire();
     super.initState();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     if (initializationError) {
       errorHandler(context, 'Something Went Wrong.', 'Please restart the app.');
     }
-    if(!isInitialized){
-       return const Center(
-      child: CircularProgressIndicator(),
-    );
+    if (!isInitialized) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
     }
     return MaterialApp(
       title: 'Flutter Firebase & tru.ID SIMCheck',
