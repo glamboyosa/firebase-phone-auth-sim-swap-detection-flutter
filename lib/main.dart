@@ -17,8 +17,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool isInitialized = false;
   bool initializationError = false;
-  // function for initializing FlutterFire
 
+  // function for initializing FlutterFire
   void initializeFlutterFire() async {
     try {
       await Firebase.initializeApp();
@@ -48,6 +48,7 @@ class _MyAppState extends State<MyApp> {
         child: CircularProgressIndicator(),
       );
     }
+
     return MaterialApp(
       title: 'Flutter Firebase & tru.ID SIMCheck',
       theme: ThemeData(

@@ -35,8 +35,7 @@ dependencies:
   cupertino_icons: ^1.0.2
   firebase_core: "^1.6.0"
   firebase_auth: "^3.1.1"
-
-  tru_sdk_flutter: "^1.0.0-preview"
+  tru_sdk_flutter: "^1.0.0"
   http: ^0.13.5
 
 dev_dependencies:

@@ -36,8 +36,16 @@ Install the **tru.ID** CLI [development server plugin](https://github.com/tru-ID
 Create a new **tru.ID** project within the root directory via:
 
 ```
-tru projects:create passwordless-auth-flutter --project-dir .
+tru projects:create firebase-auth-flutter --project-dir .
 ```
+
+If you want to create a tru.ID project with Sandbox mode enabled for testing, run:
+
+```bash
+tru projects:create firebase-auth-flutter --mode sandbox --project-dir
+```
+
+Read more about Sandbox mode [here](https://developer.tru.id/docs/sandbox).
 
 Run the development server, pointing it to the directory containing the newly created project configuration. This will also open up a localtunnel to your development server making it publicly accessible to the Internet so that your mobile phone can access it when only connected to mobile data.
 
@@ -47,7 +55,7 @@ tru server -t
 
 ## Getting started with FlutterFire
 
-This project uses FlutterFire which is a set of Flutter plugins which connect your Flutter application to Firebase. To get your project up and running check out the [overview guide](https://firebase.flutter.dev/docs/overview) and how to get setup for [Android](https://firebase.flutter.dev/docs/installation/android), [iOS](https://firebase.flutter.dev/docs/installation/ios) and [Authentication](https://firebase.flutter.dev/docs/auth/overview).
+This project uses FlutterFire which is a set of Flutter plugins which connect your Flutter application to Firebase. To get your project up and running check out the [overview guide](https://firebase.flutter.dev/docs/overview) and how to get setup for [Android](https://firebase.flutter.dev/docs/installation/android), [iOS](https://firebase.flutter.dev/docs/installation/ios) and [Authentication Setup](https://firebase.flutter.dev/docs/auth/phone).
 
 > **NOTE** Flutter with null safety is preferred.
 
