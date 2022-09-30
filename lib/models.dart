@@ -1,13 +1,11 @@
-import 'dart:convert';
+class SimCheck {
+  bool noSimChange = true;
 
-SIMCheck SIMCheckFromJSON(String jsonString) =>
-    SIMCheck.fromJSON(json.decode(jsonString));
+  SimCheck({required this.noSimChange});
 
-class SIMCheck {
-  bool simChanged;
-
-  SIMCheck({required this.simChanged});
-
-  factory SIMCheck.fromJSON(Map<String, dynamic> JSON) =>
-      SIMCheck(simChanged: !JSON["no_sim_change"]);
+  factory SimCheck.fromJson(Map<dynamic, dynamic> json) {
+    return SimCheck(
+      noSimChange: json['no_sim_change'] ?? true,
+    );
+  }
 }

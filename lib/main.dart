@@ -43,7 +43,6 @@ class _MyAppState extends State<MyApp> {
     if (initializationError) {
       errorHandler(context, 'Something Went Wrong.', 'Please restart the app.');
     }
-
     if (!isInitialized) {
       return const Center(
         child: CircularProgressIndicator(),

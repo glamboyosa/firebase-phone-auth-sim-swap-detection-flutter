@@ -1,13 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutterfire/models.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutterfire/helpers.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tru_sdk_flutter/tru_sdk_flutter.dart';
+import 'dart:convert';
+import 'package:flutterfire/models.dart';
+import 'package:http/http.dart' as http;
 
-final String baseURL = '<YOUR_LOCAL_TUNNEL_URL>';
+final String baseURL = '<YOUR_NGROK_URL>';
 
 class Login extends StatefulWidget {
   Login({Key? key}) : super(key: key);
@@ -38,7 +39,7 @@ Future<void> successHandler(BuildContext context) {
       });
 }
 
-Future<SIMCheck?> createSIMCheck(String phoneNumber) async {
+Future<SimCheck?> createSIMCheck(String phoneNumber) async {
   final response = await http.post(Uri.parse('$baseURL/sim-check'),
       body: {"phone_number": phoneNumber});
 
@@ -46,9 +47,9 @@ Future<SIMCheck?> createSIMCheck(String phoneNumber) async {
     return null;
   }
 
-  final String data = response.body;
+  SimCheck simCheck = SimCheck.fromJson(jsonDecode(response.body));
 
-  return SIMCheckFromJSON(data);
+  return simCheck;
 }
 
 class _LoginState extends State<Login> {
@@ -67,7 +68,7 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
-  // OTP Screen UI
+  // OTP Screen handler
   Future<void> otpHandler(
       BuildContext context, FirebaseAuth auth, String verificationId) {
     return showDialog(
@@ -87,9 +88,9 @@ class _LoginState extends State<Login> {
               TextButton(
                 onPressed: () async {
                   // create a PhoneAuthCredential with the otp
-
                   PhoneAuthCredential credential = PhoneAuthProvider.credential(
                       verificationId: verificationId, smsCode: otp.text);
+
                   try {
                     // sign in the user
                     await auth.signInWithCredential(credential);
@@ -103,7 +104,6 @@ class _LoginState extends State<Login> {
                     setState(() {
                       loading = false;
                     });
-
                     return errorHandler(context, "Unable to sign you in.",
                         "Unable to sign you in at this moment. Please try again");
                   }
@@ -164,27 +164,28 @@ class _LoginState extends State<Login> {
                         loading = true;
                       });
 
-                      // check if we have coverage
                       TruSdkFlutter sdk = TruSdkFlutter();
-
-                      String? reachabilityInfo = await sdk.isReachable();
-
-                      ReachabilityDetails reachabilityDetails =
-                          ReachabilityDetails.fromJson(
-                              jsonDecode(reachabilityInfo!));
-
-                      if (reachabilityDetails.error?.status == 400) {
-                        return errorHandler(context, "Something Went Wrong.",
-                            "Mobile Operator not supported.");
-                      }
-
                       bool isSIMCheckSupported = false;
+                      Map<Object?, Object?> reach = await sdk.openWithDataCellular(
+                          "https://eu.api.tru.id/public/coverage/v0.1/device_ip",
+                          false);
+                      print("isReachable = $reach");
 
-                      if (reachabilityDetails.error?.status != 412) {
-                        isSIMCheckSupported = false;
+                      if (reach.containsKey("http_status") &&
+                          reach["http_status"] != 200) {
+                        if (reach["http_status"] == 400 ||
+                            reach["http_status"] == 412) {
+                          return errorHandler(context, "Something Went Wrong.",
+                              "Mobile Operator not supported, or not a Mobile IP.");
+                        }
+                      } else if (reach.containsKey("http_status") ||
+                          reach["http_status"] == 200) {
+                        Map body =
+                            reach["response_body"] as Map<dynamic, dynamic>;
+                        Coverage coverage = Coverage.fromJson(body);
 
-                        for (var products in reachabilityDetails.products!) {
-                          if (products.productName == "Sim Check") {
+                        for (var product in coverage.products!) {
+                          if (product.name == "Sim Check") {
                             isSIMCheckSupported = true;
                           }
                         }
@@ -193,11 +194,11 @@ class _LoginState extends State<Login> {
                       }
 
                       if (isSIMCheckSupported) {
-                        // SIMCheck is supported, create SIMCheck
-                        SIMCheck? SIMCheckResult =
+                        // SIMCheck is supported; create SIMCheck
+                        SimCheck? simCheckResult =
                             await createSIMCheck(phoneNumber.text);
 
-                        if (SIMCheckResult == null) {
+                        if (simCheckResult == null) {
                           setState(() {
                             loading = false;
                           });
@@ -206,7 +207,7 @@ class _LoginState extends State<Login> {
                               'Phone number not supported');
                         }
 
-                        if (SIMCheckResult.simChanged) {
+                        if (simCheckResult.noSimChange == false) {
                           setState(() {
                             loading = false;
                             phoneNumberValue = phoneNumber.text;
@@ -218,13 +219,12 @@ class _LoginState extends State<Login> {
                               'SIM changed too recently.');
                         }
 
-                        //The SIM hasn't changed in the last 7 days, proceed with Firebase Auth
-
+                        //The SIM hasn't changed in 7 days; proceed with Firebase Auth
                         // create a Firebase Auth instance
                         FirebaseAuth auth = FirebaseAuth.instance;
 
                         await auth.verifyPhoneNumber(
-                          phoneNumber: phoneNumberValue!,
+                          phoneNumber: phoneNumber.text,
                           timeout: const Duration(seconds: 120),
                           verificationCompleted:
                               (PhoneAuthCredential credential) async {
@@ -264,12 +264,13 @@ class _LoginState extends State<Login> {
                           codeAutoRetrievalTimeout: (String verificationId) {},
                         );
                       } else {
-                        // SIM Check isn't supported by MNO do not bother creating SIMCheck just proceed with Firebase Auth
+                        // SIMCheck is not supported by MNO. Do not bother creating SIMCheck proceed with Firebase Auth.
+
                         // create a Firebase Auth instance
-                        phoneNumber.clear();
                         FirebaseAuth auth = FirebaseAuth.instance;
+
                         await auth.verifyPhoneNumber(
-                          phoneNumber: phoneNumberValue!,
+                          phoneNumber: phoneNumber.text,
                           timeout: const Duration(seconds: 120),
                           verificationCompleted:
                               (PhoneAuthCredential credential) async {
@@ -300,8 +301,8 @@ class _LoginState extends State<Login> {
                             });
 
                             print("your resend token is: ");
-
                             print(resendToken);
+
                             // render OTP dialog UI
                             otpHandler(context, auth, verificationId);
                           },
